@@ -1,8 +1,10 @@
-defmodule MessagePackRPC.Connection do
-  use GenServer.Behaviour
-  use MessagePackRPC.Utils
+defmodule ConnState do
+	defstruct connection: nil, transport: nil, counter: 0, session: [], buffer: ""
+end
 
-  defrecord State, connection: nil, transport: nil, counter: 0, session: [], buffer: ""
+defmodule MessagePackRPC.Connection do
+  use GenServer
+  use MessagePackRPC.Utils
 
   def start_link(args) do
     :gen_server.start_link(__MODULE__, args, [])
@@ -18,11 +20,11 @@ defmodule MessagePackRPC.Connection do
 
     { :ok, socket } = transport.connect(address, port, opts)
     :ok = transport.controlling_process(socket, self)
-    { :ok, State[connection: socket, transport: transport] }
+    { :ok, %ConnState{connection: socket, transport: transport} }
   end
 
 
-  def handle_call({:call_async, method, args}, _from, state = State[connection: socket, transport: transport, session: sessions, counter: count]) do
+  def handle_call({:call_async, method, args}, _from, state = %ConnState{connection: socket, transport: transport, session: sessions, counter: count}) do
     call_id = count
     binary = [@mp_type_request, call_id, method, args] |> MessagePack.pack
     :ok = transport.send(socket, binary)
@@ -30,7 +32,7 @@ defmodule MessagePackRPC.Connection do
     { :reply, { :ok, call_id }, state.update(counter: count + 1, session: [{call_id, :none}|sessions]) }
   end
 
-  def handle_call({:join, call_id}, from, state = State[session: sessions0]) do
+  def handle_call({:join, call_id}, from, state = %ConnState{session: sessions0}) do
     case :lists.keytake(call_id, 1, sessions0) do
       false ->
         { :reply, { :error, :norequest }, state }
@@ -51,7 +53,7 @@ defmodule MessagePackRPC.Connection do
   def handle_call(_request, _from, state), do: { :reply, { :error, :badevent }, state }
 
 
-  def handle_cast({:notify, method, args}, state = State[connection: socket, transport: transport]) do
+  def handle_cast({:notify, method, args}, state = %ConnState{connection: socket, transport: transport}) do
     binary = [@mp_type_notify, method, args] |> MessagePack.pack
     :ok = transport.send(socket, binary)
     { :noreply, state }
@@ -62,13 +64,13 @@ defmodule MessagePackRPC.Connection do
   end
 
 
-  def handle_info({tcp, socket, bin}, state = State[transport: transport, session: sessions0, buffer: buf]) do
+  def handle_info({tcp, socket, bin}, state = %ConnState{transport: transport, session: sessions0, buffer: buf}) do
     if tcp == :tcp do
       new_buffer = << buf :: binary, bin :: binary >>
       :ok = transport.setopts(socket, [{:active, :once}])
 
       case MessagePack.unpack_stream(new_buffer) do
-        { :error, re } ->
+        { :error, _re } ->
           { :noreply, state.update(buffer: new_buffer) }
         { term, remain } ->
           [@mp_type_response, call_id, res_code, result] = term
@@ -95,12 +97,12 @@ defmodule MessagePackRPC.Connection do
     { :noreply, state }
   end
 
-  def handle_info(_info, state = State[connection: socket, transport: transport]) do
+  def handle_info(_info, state = %ConnState{connection: socket, transport: transport}) do
     :ok = transport.setopts(socket, [{:active, :once}])
     { :noreply, state }
   end
 
-  def terminate(_reason, _state = State[connection: socket, transport: transport]) do
+  def terminate(_reason, _state = %ConnState{connection: socket, transport: transport}) do
     transport.close(socket)
     :ok
   end

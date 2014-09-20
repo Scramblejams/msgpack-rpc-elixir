@@ -21,7 +21,7 @@ defmodule MessagePackRPC.Client do
   end
 
   def call_async(pid: pid, func: method, args: args) do
-    bin_method = atom_to_binary(method, :latin1)
+    bin_method = :erlang.atom_to_binary(method, :latin1)
     :gen_server.call(pid, { :call_async, bin_method, args })
   end
 
@@ -30,7 +30,7 @@ defmodule MessagePackRPC.Client do
   end
 
   def notify(pid: pid, func: method, args: args) do
-    bin_method = atom_to_binary(method, :latin1)
+    bin_method = :erlang.atom_to_binary(method, :latin1)
     :gen_server.cast(pid, { :notify, bin_method, args })
   end
 
