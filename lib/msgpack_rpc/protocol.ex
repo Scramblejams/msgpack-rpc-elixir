@@ -1,17 +1,17 @@
 defmodule ProtocolState do
-	defstruct	listener:         nil,
+  defstruct listener:         nil,
             socket:           nil,
-						transport:        nil,
-						handler:          nil,
-						req_keepalive:    1,
-						max_keepalive:    nil,
-						max_line_length:  nil,
-						timeout:          nil,
-						buffer:           "",
-						hibernate:        false,
-						loop_timeout:     :infinity,
-						loop_timeout_ref: :undefined,
-						module:           :undefined
+            transport:        nil,
+            handler:          nil,
+            req_keepalive:    1,
+            max_keepalive:    nil,
+            max_line_length:  nil,
+            timeout:          nil,
+            buffer:           "",
+            hibernate:        false,
+            loop_timeout:     :infinity,
+            loop_timeout_ref: :undefined,
+            module:           :undefined
 end
 
 defmodule MessagePackRPC.Protocol do

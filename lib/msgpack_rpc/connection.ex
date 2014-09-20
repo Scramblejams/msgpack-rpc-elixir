@@ -1,5 +1,5 @@
 defmodule ConnState do
-	defstruct connection: nil, transport: nil, counter: 0, session: [], buffer: ""
+  defstruct connection: nil, transport: nil, counter: 0, session: [], buffer: ""
 end
 
 defmodule MessagePackRPC.Connection do
